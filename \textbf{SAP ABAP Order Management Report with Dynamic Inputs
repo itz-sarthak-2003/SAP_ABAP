@@ -1,0 +1,150 @@
+REPORT  ZSC6_DB1.
+
+DATA : WA TYPE ZBR6_ORDH.   "create an work area for the header table.
+
+TYPES : BEGIN OF STRUCTURE,
+        ONUMBER TYPE ZONUMBER ,
+        END OF STRUCTURE.
+DATA : IT TYPE TABLE OF STRUCTURE.
+DATA : WA1 TYPE STRUCTURE.
+
+TYPES :  BEGIN OF STRUCTURE2,
+         ODATE    TYPE   ZDATEORDER ,
+         OPAYMENT  TYPE   ZOPAYMENT ,
+         OTOTALAMOUNT TYPE  ZOTOTALAMOUNT ,
+         OCURRENCY TYPE ZOCURRENCY,
+         END OF STRUCTURE2.
+DATA : WA2 TYPE STRUCTURE2.
+
+PARAMETERS : P_ONO TYPE ZONUMBER OBLIGATORY.
+PARAMETERS : P_ODATE TYPE ZDATEORDER MODIF ID A1.
+PARAMETERS : P_OPM TYPE ZOPAYMENT MODIF ID A2.
+PARAMETERS : P_OTA TYPE  ZOTOTALAMOUNT MODIF ID A3.
+PARAMETERS : P_OCURR TYPE ZOCURRENCY MODIF ID A4.
+
+*RADIO BUTTON
+PARAMETERS : P_R1 TYPE C RADIOBUTTON GROUP R1 USER-COMMAND ABC.
+PARAMETERS : P_R2 TYPE C RADIOBUTTON GROUP R1.
+PARAMETERS : P_R3 TYPE C RADIOBUTTON GROUP R1.
+PARAMETERS : P_R4 TYPE C RADIOBUTTON GROUP R1 DEFAULT 'X'.
+
+
+"the events calls when user clicks on execute buttton on the selection screen
+START-OF-SELECTION.
+  IF P_R1 = 'X'.                  "this is for an insertion purpose
+    WA-ONUMBER = P_ONO.
+    WA-ODATE = P_ODATE.
+    WA-OPAYMENT = P_OPM.
+    WA-OTOTALAMOUNT = P_OTA.
+    WA-OCURRENCY = P_OCURR.
+    INSERT ZBR6_ORDH FROM WA.    "data is moving from work area to databse table.
+      IF  SY-SUBRC = 0.
+            WRITE : / 'RECORD INSERTED SUCCESSFULLY ' .
+          ELSE.
+            WRITE : / 'RECORD FAILED TO INSERT ' .
+      ENDIF.
+  ENDIF.
+
+IF P_R2 = 'X'.                  "this is for an deletion purpose
+    WA-ONUMBER = P_ONO.
+    DELETE ZBR6_ORDH FROM WA.
+    IF SY-SUBRC = 0.
+      WRITE : / 'RECORD DELETED SUCCESSFULLY ' , ':' , P_ONO.
+    ENDIF.
+ENDIF.
+
+IF P_R3 = 'X'.            "this is for update radio button purpose.
+    WA-ONUMBER = P_ONO.
+    WA-ODATE = P_ODATE.
+    WA-OPAYMENT = P_OPM.
+    WA-OCURRENCY = P_OCURR.
+    UPDATE ZBR6_ORDH FROM WA.
+    IF SY-SUBRC = 0.
+      WRITE : 'RECORD UPDATED SUCCESSFULLY ' , ':' , P_ONO.
+    ENDIF.
+ENDIF.
+
+IF P_R4 = 'X'.          "this is for modified radio button purpose.
+    WA-ONUMBER = P_ONO.
+    WA-ODATE = P_ODATE.
+    WA-OPAYMENT = P_OPM.
+    WA-OCURRENCY = P_OCURR.
+    MODIFY ZBR6_ORDH FROM WA.
+    IF SY-SUBRC = 0.
+      WRITE : 'RECORD MODIFIED SUCCESSFULLY ' , ':' , P_ONO.
+    ENDIF.
+ENDIF.
+
+
+"this event is trigger after providing the input on the selectio screen.
+AT SELECTION-SCREEN.
+IF P_R1 = 'X'.
+      SELECT ONUMBER
+      FROM ZBR6_ORDH
+      INTO TABLE IT
+      WHERE ONUMBER = P_ONO.
+      IF SY-SUBRC = 0.
+        MESSAGE E006(ZRB6_MR1) WITH P_ONO.
+      ENDIF.
+ ENDIF.
+
+ IF P_R2 = 'X'.
+     SELECT SINGLE ONUMBER
+     FROM ZBR6_ORDH
+     INTO WA1
+     WHERE ONUMBER = P_ONO.
+     IF SY-SUBRC <> 0.
+       MESSAGE E007(ZRB6_MR1) WITH P_ONO.
+     ENDIF.
+ ENDIF.
+
+IF P_R3 = 'X'.
+     SELECT SINGLE ONUMBER
+     FROM ZBR6_ORDH
+     INTO WA1
+     WHERE ONUMBER = P_ONO.
+     IF SY-SUBRC <> 0.
+       MESSAGE E007(ZRB6_MR1) WITH P_ONO.
+     ENDIF.
+     ELSE.
+         SELECT SINGLE ODATE OPAYMENT OTOTALAMOUNT OCURRENCY
+         FROM ZBR6_ORDH
+         INTO WA2
+         WHERE ONUMBER = P_ONO.
+ENDIF.
+
+  IF P_R4 = 'X'.
+     SELECT SINGLE ONUMBER
+     FROM ZBR6_ORDH
+     INTO WA1
+     WHERE ONUMBER = P_ONO.
+     IF SY-SUBRC <> 0.
+       CLEAR : WA1.
+     ENDIF.
+  ENDIF.
+
+
+"this purpose of this event is to modify thr selection screen before it is displayed.
+AT SELECTION-SCREEN OUTPUT.
+IF P_R2 = 'X'.
+       LOOP AT SCREEN.
+          IF SCREEN-GROUP1 = 'A1' OR SCREEN-GROUP1 = 'A2' OR SCREEN-GROUP1 = 'A3' OR SCREEN-GROUP1 = 'A4'.
+             SCREEN-ACTIVE = 0.
+             MODIFY SCREEN.
+          ENDIF.
+       ENDLOOP.
+ENDIF.
+
+IF P_R3 = 'X'.
+    P_ODATE = WA2-ODATE.
+    P_OPM = WA2-OPAYMENT.
+    P_OTA = WA2-OTOTALAMOUNT.
+    P_OCURR = WA2-OCURRENCY.
+ENDIF.
+
+IF P_R4 = 'X'.
+    P_ODATE = WA2-ODATE.
+    P_OPM = WA2-OPAYMENT.
+    P_OTA = WA2-OTOTALAMOUNT.
+    P_OCURR = WA2-OCURRENCY.
+ENDIF.
